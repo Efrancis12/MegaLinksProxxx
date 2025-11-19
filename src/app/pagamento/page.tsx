@@ -1,15 +1,25 @@
 "use client";
 
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
+// 1️⃣ Wrapper necessário para buildar na Vercel
 export default function PagamentoPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40 }}>Carregando pagamento...</div>}>
+      <PagamentoPageContent />
+    </Suspense>
+  );
+}
+
+// 2️⃣ Aqui fica TODO seu código original
+function PagamentoPageContent() {
   const searchParams = useSearchParams();
   const plano = searchParams.get("plano");
   const [loading, setLoading] = useState(false);
 
   // LINKS DE PAGAMENTO DA PUSHIN PAY
-  const links = {
+  const links: Record<string, string> = {
     basico: "https://app.pushinpay.com.br/service/pay/A05FF614-C67F-4744-B3DD-F2AB45BB3E5B",
     destaque: "https://app.pushinpay.com.br/service/pay/A061104D-031A-4B51-B08C-FDE6638E5127",
     premium: "https://app.pushinpay.com.br/service/pay/A06111EE-929A-4345-9813-26E9CCF10FA9",
@@ -28,10 +38,15 @@ export default function PagamentoPage() {
   return (
     <div style={{ padding: "40px", textAlign: "center" }}>
       <h1>Finalize seu pagamento</h1>
+
       {!plano && <p>Nenhum plano selecionado.</p>}
+
       {plano && (
         <>
-          <p>Você está contratando o plano: <strong>{plano}</strong></p>
+          <p>
+            Você está contratando o plano: <strong>{plano}</strong>
+          </p>
+
           <button
             onClick={handlePagamento}
             style={{
