@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/custom/navbar";
 import Footer from "@/components/custom/footer";
@@ -8,16 +8,33 @@ import GroupCard from "@/components/custom/group-card";
 import AgeVerificationModal from "@/components/custom/age-verification-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGroupStore } from "@/lib/store";
-import { CATEGORIES, Category } from "@/lib/types";
+import { CATEGORIES } from "@/lib/types";
 import { isAdultCategory } from "@/lib/utils-groups";
 import { Filter, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
+// 🔥 Wrapper necessário para Vercel com Suspense
 export default function GruposPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Carregando grupos...</div>}>
+      <GruposPageContent />
+    </Suspense>
+  );
+}
+
+// 🔥 Todo seu componente original vai aqui dentro
+function GruposPageContent() {
   const searchParams = useSearchParams();
   const { getActiveGroups } = useGroupStore();
+
   const [groups, setGroups] = useState<any[]>([]);
   const [filteredGroups, setFilteredGroups] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -28,8 +45,7 @@ export default function GruposPage() {
   useEffect(() => {
     const allGroups = getActiveGroups();
     setGroups(allGroups);
-    
-    // Verificar se há categoria na URL
+
     const categoryParam = searchParams.get("categoria");
     if (categoryParam) {
       handleCategoryChange(categoryParam);
@@ -65,20 +81,18 @@ export default function GruposPage() {
   const filterGroups = () => {
     let filtered = groups;
 
-    // Filtrar por categoria
     if (selectedCategory !== "all") {
       filtered = filtered.filter((g) => g.categoria === selectedCategory);
     }
 
-    // Filtrar por busca
     if (searchTerm) {
-      filtered = filtered.filter((g) =>
-        g.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        g.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (g) =>
+          g.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          g.descricao.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Ordenar: Premium > Destaque > Outros
     filtered.sort((a, b) => {
       if (a.plano === "premium" && b.plano !== "premium") return -1;
       if (a.plano !== "premium" && b.plano === "premium") return 1;
@@ -95,6 +109,7 @@ export default function GruposPage() {
       <Navbar />
       <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
           {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">
@@ -108,6 +123,7 @@ export default function GruposPage() {
           {/* Filtros */}
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-8 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
+
               {/* Busca */}
               <div className="flex-1">
                 <div className="relative">
@@ -145,11 +161,7 @@ export default function GruposPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Filtrando por:</span>
                 <Badge variant="secondary">{selectedCategory}</Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedCategory("all")}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCategory("all")}>
                   Limpar
                 </Button>
               </div>
@@ -159,11 +171,12 @@ export default function GruposPage() {
           {/* Resultados */}
           <div className="mb-6">
             <p className="text-gray-600">
-              {filteredGroups.length} {filteredGroups.length === 1 ? "grupo encontrado" : "grupos encontrados"}
+              {filteredGroups.length}{" "}
+              {filteredGroups.length === 1 ? "grupo encontrado" : "grupos encontrados"}
             </p>
           </div>
 
-          {/* Grid de Grupos */}
+          {/* Grid */}
           {filteredGroups.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredGroups.map((group) => (
@@ -191,9 +204,9 @@ export default function GruposPage() {
         </div>
       </main>
       <Footer />
-      
+
       <AgeVerificationModal 
-        isOpen={showAgeModal} 
+        isOpen={showAgeModal}
         onClose={handleAgeModalClose}
       />
     </>
