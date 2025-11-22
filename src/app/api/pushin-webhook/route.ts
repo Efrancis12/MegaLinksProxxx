@@ -1,49 +1,77 @@
+// src/app/api/pushin-webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // SERVICE ROLE (só backend)
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    console.log("🚀 Webhook Pushin recebido:", body);
+    console.log("💳 Webhook Pushin recebido:", body);
 
-    // Aqui você adapta de acordo com o que a Pushin manda
-    // Esses nomes são exemplos – depois é bom conferir no painel / docs deles:
-    const status = body.status;                // ex: "paid", "approved"
-    const referenceId = body.reference_id;     // ID interno que você enviar
+    const status = body.status;            // ex: "paid"
+    const referenceId = body.reference_id; // aqui vai ser o userId
+    const plan = body.plan ?? "basico";    // planejo que venha "basico", "pro", etc
 
-    // Se não tiver referenceId, não tem como saber quem é o usuário
     if (!referenceId) {
       console.error("Webhook sem referenceId");
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Só faz algo se o pagamento foi aprovado
+    // Só processa se estiver pago
     const isPaid =
       status === "paid" ||
       status === "approved" ||
       status === "concluded";
 
-    if (isPaid) {
-      // 👉 AQUI entra a lógica de atualizar o plano no seu banco (Supabase, etc.)
-      // Exemplo (quando você quiser implementar de verdade):
-      //
-      // const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      // await supabase.from("profiles")
-      //   .update({ plano: "basico", plano_ativo: true })
-      //   .eq("id", referenceId);
-      //
-      console.log("Pagamento aprovado para referência:", referenceId);
+    if (!isPaid) {
+      console.log("Pagamento com status não-aprovado:", status);
+      return NextResponse.json({ ok: true });
     }
 
-    // Sempre responde 200 para a Pushin não ficar reenviando sem parar
+    // 👉 AQUI é onde liberamos o plano pro usuário
+
+    // 🔁 Ajuste os nomes da tabela e colunas conforme seu banco.
+    // Exemplo supondo uma tabela "profiles" com colunas:
+    // - id (igual ao user.id do Supabase Auth)
+    // - plan (texto: "basico", "pro", etc.)
+    // - plan_status (texto: "active", "expired" etc.)
+    const { error } = await supabase
+      .from("profiles") // TROQUE se sua tabela tiver outro nome
+      .update({
+        plan,
+        plan_status: "active",
+        plan_updated_at: new Date().toISOString(),
+      })
+      .eq("id", referenceId);
+
+    if (error) {
+      console.error("Erro ao atualizar plano do usuário:", error);
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log(
+      `✅ Pagamento aprovado. Usuário ${referenceId} agora está no plano: ${plan}`
+    );
+
     return NextResponse.json({ ok: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro no webhook da Pushin:", err);
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err?.message }, { status: 500 });
   }
 }
 
-// Opcional, só pra você conseguir abrir no navegador e ver que a rota existe
+// Opcional, pra ver no navegador se a rota existe
 export async function GET() {
-  return NextResponse.json({ ok: true, message: "Pushin webhook endpoint ativo" });
+  return NextResponse.json({
+    ok: true,
+    message: "Pushin webhook endpoint ativo",
+  });
 }
