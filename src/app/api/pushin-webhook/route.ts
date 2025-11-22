@@ -4,25 +4,32 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // SERVICE ROLE (só backend)
+const pushinSecret = process.env.PUSHIN_WEBHOOK_TOKEN!;            // mesmo token da Pushin
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
   try {
+    // ✅ valida o token que a Pushin manda no header
+    const headerToken = req.headers.get("x-pushinpay-token");
+    if (!headerToken || headerToken !== pushinSecret) {
+      console.error("❌ Token do webhook inválido:", headerToken);
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+
     const body = await req.json();
 
     console.log("💳 Webhook Pushin recebido:", body);
 
-    const status = body.status;            // ex: "paid"
-    const referenceId = body.reference_id; // aqui vai ser o userId
-    const plan = body.plan ?? "basico";    // planejo que venha "basico", "pro", etc
+    const status = body.status;               // ex: "paid"
+    const referenceId = body.reference_id;    // aqui vai ser o userId
+    const plan = body.plan ?? "basico";       // "basico", "destaque", "premium"...
 
     if (!referenceId) {
       console.error("Webhook sem referenceId");
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Só processa se estiver pago
     const isPaid =
       status === "paid" ||
       status === "approved" ||
@@ -33,15 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 👉 AQUI é onde liberamos o plano pro usuário
-
-    // 🔁 Ajuste os nomes da tabela e colunas conforme seu banco.
-    // Exemplo supondo uma tabela "profiles" com colunas:
-    // - id (igual ao user.id do Supabase Auth)
-    // - plan (texto: "basico", "pro", etc.)
-    // - plan_status (texto: "active", "expired" etc.)
+    // 👉 Atualiza o plano do usuário na tabela profiles
     const { error } = await supabase
-      .from("profiles") // TROQUE se sua tabela tiver outro nome
+      .from("profiles")
       .update({
         plan,
         plan_status: "active",
@@ -64,7 +65,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("Erro no webhook da Pushin:", err);
-    return NextResponse.json({ ok: false, error: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: err?.message },
+      { status: 500 }
+    );
   }
 }
 
