@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, FormEvent, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function AuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // se tiver ?mode=login mostra login, se não, signup
-  const initialMode = searchParams.get('mode') === 'login' ? 'login' : 'signup';
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  // modo inicial: signup (Criar Conta)
+  const [mode, setMode] = useState<'login' | 'signup'>('signup');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +45,6 @@ export default function AuthPage() {
           return;
         }
 
-        // se não exigir confirmação por e-mail, já loga e manda pro painel
         router.push('/painel');
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -165,31 +162,4 @@ export default function AuthPage() {
                 className="text-blue-600 font-semibold hover:underline"
                 onClick={() => setMode('login')}
               >
-                Entrar
-              </button>
-            </>
-          ) : (
-            <>
-              Ainda não tem conta?{' '}
-              <button
-                type="button"
-                className="text-blue-600 font-semibold hover:underline"
-                onClick={() => setMode('signup')}
-              >
-                Criar conta
-              </button>
-            </>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className="mt-4 w-full text-center text-xs text-gray-400 hover:text-gray-600"
-        >
-          ← Voltar para o início
-        </button>
-      </div>
-    </div>
-  );
-}
+                Entr
