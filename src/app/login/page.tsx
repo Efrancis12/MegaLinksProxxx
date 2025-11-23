@@ -1,139 +1,281 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+type Mode = 'login' | 'signup';
 
 export default function AuthPage() {
   const router = useRouter();
 
-  // modo inicial: signup (Criar Conta)
-  const [mode, setMode] = useState<'login' | 'signup'>('signup');
-
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // se o usuário já estiver logado, manda para o painel
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        router.push('/painel');
-      }
-    };
-    checkUser();
-  }, [router]);
-
-  const handleSubmit = async (e: FormEvent) => {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setLoading(true);
 
     try {
-      if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        console.log('signup result', { data, error });
-
-        if (error) {
-          setErrorMsg(error.message);
-          return;
-        }
-
-        router.push('/painel');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        console.log('login result', { data, error });
-
-        if (error) {
-          setErrorMsg(error.message);
-          return;
-        }
-
-        router.push('/painel');
+      if (!email || !password) {
+        setErrorMsg('Informe e-mail e senha.');
+        return;
       }
-    } catch (err: any) {
-      console.error('Erro inesperado no auth:', err);
-      setErrorMsg(
-        err?.message || 'Erro inesperado ao comunicar com o servidor.',
-      );
+
+      if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (error) {
+          setErrorMsg(error.message);
+          return;
+        }
+
+        // opção: redirecionar pro painel depois do cadastro
+        router.push('/panel');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          setErrorMsg(error.message);
+          return;
+        }
+
+        router.push('/panel');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Erro ao comunicar com o servidor. Tente novamente.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const isSignup = mode === 'signup';
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-100">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
-        {/* Logo / título */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-blue-500 text-2xl">✈</span>
-            <span className="font-semibold text-xl text-blue-700">
-              MegaLinksPro
-            </span>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f3f4f6',
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          background: '#fff',
+          borderRadius: 16,
+          boxShadow:
+            '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+          padding: 32,
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '9999px',
+              margin: '0 auto 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background:
+                'linear-gradient(135deg, #6366f1, #3b82f6)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 22,
+            }}
+          >
+            M
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isSignup ? 'Criar Conta' : 'Entrar'}
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              marginBottom: 4,
+              color: '#111827',
+            }}
+          >
+            MegaLinksPro
           </h1>
-          <p className="text-sm text-gray-500 mt-1 text-center">
-            {isSignup
-              ? 'Cadastre-se para começar a divulgar seus grupos.'
-              : 'Entre para gerenciar e divulgar seus grupos.'}
+          <p style={{ fontSize: 14, color: '#6b7280' }}>
+            {mode === 'login'
+              ? 'Entre para gerenciar e divulgar seus grupos.'
+              : 'Crie sua conta para começar a divulgar seus grupos.'}
           </p>
         </div>
 
-        {/* Mensagem de erro */}
+        {/* Botões de alternância Login / Cadastro */}
+        <div
+          style={{
+            display: 'flex',
+            marginBottom: 20,
+            background: '#f3f4f6',
+            borderRadius: 999,
+            padding: 4,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setMode('login')}
+            style={{
+              flex: 1,
+              borderRadius: 999,
+              border: 'none',
+              padding: '8px 0',
+              fontSize: 14,
+              cursor: 'pointer',
+              background:
+                mode === 'login' ? '#fff' : 'transparent',
+              fontWeight: mode === 'login' ? 600 : 500,
+              color: mode === 'login' ? '#111827' : '#6b7280',
+            }}
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('signup')}
+            style={{
+              flex: 1,
+              borderRadius: 999,
+              border: 'none',
+              padding: '8px 0',
+              fontSize: 14,
+              cursor: 'pointer',
+              background:
+                mode === 'signup' ? '#fff' : 'transparent',
+              fontWeight: mode === 'signup' ? 600 : 500,
+              color: mode === 'signup' ? '#111827' : '#6b7280',
+            }}
+          >
+            Criar conta
+          </button>
+        </div>
+
         {errorMsg && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div
+            style={{
+              background: '#fef2f2',
+              borderRadius: 8,
+              padding: '8px 12px',
+              fontSize: 13,
+              color: '#b91c1c',
+              marginBottom: 16,
+            }}
+          >
             {errorMsg}
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              style={{
+                display: 'block',
+                fontSize: 14,
+                fontWeight: 500,
+                marginBottom: 4,
+                color: '#374151',
+              }}
+            >
               Email
             </label>
-            <div className="flex items-center border rounded-lg px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-              <span className="text-gray-400 mr-2">📧</span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                padding: '8px 10px',
+                background: '#f9fafb',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  color: '#9ca3af',
+                  marginRight: 8,
+                }}
+              >
+                @
+              </span>
               <input
                 type="email"
                 required
-                autoComplete="email"
-                className="w-full bg-transparent outline-none text-sm text-gray-800"
-                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: 14,
+                  color: '#111827',
+                }}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              style={{
+                display: 'block',
+                fontSize: 14,
+                fontWeight: 500,
+                marginBottom: 4,
+                color: '#374151',
+              }}
+            >
               Senha
             </label>
-            <div className="flex items-center border rounded-lg px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-              <span className="text-gray-400 mr-2">🔒</span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                padding: '8px 10px',
+                background: '#f9fafb',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  color: '#9ca3af',
+                  marginRight: 8,
+                }}
+              >
+                🔒
+              </span>
               <input
                 type="password"
                 required
-                autoComplete={isSignup ? 'new-password' : 'current-password'}
-                className="w-full bg-transparent outline-none text-sm text-gray-800"
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: 14,
+                  color: '#111827',
+                }}
               />
             </div>
           </div>
@@ -141,51 +283,30 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 py-2.5 rounded-lg text-white font-semibold text-sm bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              marginTop: 8,
+              width: '100%',
+              borderRadius: 999,
+              border: 'none',
+              padding: '10px 0',
+              cursor: loading ? 'default' : 'pointer',
+              fontSize: 15,
+              fontWeight: 600,
+              color: '#fff',
+              background:
+                'linear-gradient(135deg, #6366f1, #3b82f6)',
+              opacity: loading ? 0.7 : 1,
+            }}
           >
             {loading
-              ? isSignup
-                ? 'Criando conta...'
-                : 'Entrando...'
-              : isSignup
-              ? 'Criar Conta'
-              : 'Entrar'}
+              ? mode === 'login'
+                ? 'Entrando...'
+                : 'Criando conta...'
+              : mode === 'login'
+              ? 'Entrar'
+              : 'Criar conta'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-600">
-          {isSignup ? (
-            <>
-              Já tem uma conta?{' '}
-              <button
-                type="button"
-                className="text-blue-600 font-semibold hover:underline"
-                onClick={() => setMode('login')}
-              >
-                Entrar
-              </button>
-            </>
-          ) : (
-            <>
-              Ainda não tem conta?{' '}
-              <button
-                type="button"
-                className="text-blue-600 font-semibold hover:underline"
-                onClick={() => setMode('signup')}
-              >
-                Criar conta
-              </button>
-            </>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className="mt-4 w-full text-center text-xs text-gray-400 hover:text-gray-600"
-        >
-          ← Voltar para o início
-        </button>
       </div>
     </div>
   );
