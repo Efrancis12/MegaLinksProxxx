@@ -1,146 +1,194 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Send, Mail, Lock, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, FormEvent, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-export default function LoginPage() {
+export default function AuthPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
+  const searchParams = useSearchParams();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  // se tiver ?mode=login mostra login, se não, signup
+  const initialMode = searchParams.get('mode') === 'login' ? 'login' : 'signup';
+  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // se o usuário já estiver logado, manda para o painel
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        router.push('/painel');
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
-    setError("");
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
-        if (error) throw error;
-        setError("Verifique seu email para confirmar o cadastro!");
+
+        console.log('signup result', { data, error });
+
+        if (error) {
+          setErrorMsg(error.message);
+          return;
+        }
+
+        // se não exigir confirmação por e-mail, já loga e manda pro painel
+        router.push('/painel');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        router.push("/painel");
+
+        console.log('login result', { data, error });
+
+        if (error) {
+          setErrorMsg(error.message);
+          return;
+        }
+
+        router.push('/painel');
       }
-    } catch (error: any) {
-      setError(error.message || "Erro ao fazer login");
+    } catch (err: any) {
+      console.error('Erro inesperado no auth:', err);
+      setErrorMsg(
+        err?.message || 'Erro inesperado ao comunicar com o servidor.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const isSignup = mode === 'signup';
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <Send className="w-8 h-8 text-blue-600" />
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            MegaLinksPro
-          </span>
-        </Link>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-100">
+      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
+        {/* Logo / título */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-blue-500 text-2xl">✈</span>
+            <span className="font-semibold text-xl text-blue-700">
+              MegaLinksPro
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isSignup ? 'Criar Conta' : 'Entrar'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 text-center">
+            {isSignup
+              ? 'Cadastre-se para começar a divulgar seus grupos.'
+              : 'Entre para gerenciar e divulgar seus grupos.'}
+          </p>
+        </div>
 
-        <Card className="border-2">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              {isSignUp ? "Criar Conta" : "Entrar"}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {isSignUp 
-                ? "Cadastre-se para começar a divulgar seus grupos" 
-                : "Entre com seu email e senha"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAuth} className="space-y-4">
-              {error && (
-                <Alert variant={error.includes("Verifique") ? "default" : "destructive"}>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+        {/* Mensagem de erro */}
+        {errorMsg && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorMsg}
+          </div>
+        )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <div className="flex items-center border rounded-lg px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <span className="text-gray-400 mr-2">📧</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                className="w-full bg-transparent outline-none text-sm text-gray-800"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                    minLength={6}
-                  />
-                </div>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Senha
+            </label>
+            <div className="flex items-center border rounded-lg px-3 py-2 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <span className="text-gray-400 mr-2">🔒</span>
+              <input
+                type="password"
+                required
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
+                className="w-full bg-transparent outline-none text-sm text-gray-800"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                disabled={loading}
-              >
-                {loading ? "Carregando..." : isSignUp ? "Criar Conta" : "Entrar"}
-              </Button>
-            </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-4 py-2.5 rounded-lg text-white font-semibold text-sm bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading
+              ? isSignup
+                ? 'Criando conta...'
+                : 'Entrando...'
+              : isSignup
+              ? 'Criar Conta'
+              : 'Entrar'}
+          </button>
+        </form>
 
-            <div className="mt-6 text-center text-sm">
+        <div className="mt-6 text-center text-sm text-gray-600">
+          {isSignup ? (
+            <>
+              Já tem uma conta?{' '}
               <button
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError("");
-                }}
-                className="text-blue-600 hover:underline"
+                type="button"
+                className="text-blue-600 font-semibold hover:underline"
+                onClick={() => setMode('login')}
               >
-                {isSignUp 
-                  ? "Já tem uma conta? Entrar" 
-                  : "Não tem conta? Cadastre-se"}
+                Entrar
               </button>
-            </div>
+            </>
+          ) : (
+            <>
+              Ainda não tem conta?{' '}
+              <button
+                type="button"
+                className="text-blue-600 font-semibold hover:underline"
+                onClick={() => setMode('signup')}
+              >
+                Criar conta
+              </button>
+            </>
+          )}
+        </div>
 
-            <div className="mt-4 text-center">
-              <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
-                ← Voltar para o início
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={() => router.push('/')}
+          className="mt-4 w-full text-center text-xs text-gray-400 hover:text-gray-600"
+        >
+          ← Voltar para o início
+        </button>
       </div>
     </div>
   );
