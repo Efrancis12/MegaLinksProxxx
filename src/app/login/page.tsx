@@ -1,85 +1,95 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-export default function LoginPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function LoginSignupPage() {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const router = useRouter();
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setErrorMsg(null);
     setLoading(true);
+    setErrorMsg("");
 
-    try {
-      const endpoint =
-        mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || 'Erro ao processar a requisição.');
-        return;
-      }
-
-      // aqui você decide pra onde mandar depois de logar/criar conta
-      router.push('/'); // ou /dashboard, /grupos, etc.
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Erro de rede ao falar com o servidor.');
-    } finally {
+    if (error) {
+      console.error(error);
+      setErrorMsg(error.message || "Erro ao entrar. Tente novamente.");
       setLoading(false);
+      return;
     }
+
+    // login OK – manda para a página inicial (ajuste se quiser outro caminho)
+    window.location.href = "/";
   }
 
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error(error);
+      setErrorMsg(error.message || "Erro ao criar conta. Tente novamente.");
+      setLoading(false);
+      return;
+    }
+
+    // cadastro OK – você pode pedir para confirmar e-mail, etc.
+    alert("Conta criada! Verifique seu e-mail (se o Supabase estiver com confirmação ligada).");
+    window.location.href = "/";
+  }
+
+  const onSubmit = mode === "login" ? handleLogin : handleSignup;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100">
+      <div className="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xl font-bold mb-2">
+          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold mb-2">
             M
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            MegaLinksPro
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Crie sua conta para começar a divulgar seus grupos.
+          <h1 className="text-xl font-semibold text-slate-800">MegaLinksPro</h1>
+          <p className="text-sm text-slate-500 text-center mt-1">
+            {mode === "login"
+              ? "Entre para gerenciar e divulgar seus grupos."
+              : "Crie sua conta para começar a divulgar seus grupos."}
           </p>
         </div>
 
-        <div className="flex mb-4 bg-gray-100 rounded-lg p-1">
+        {/* Tabs Entrar / Criar conta */}
+        <div className="flex mb-4 border border-slate-200 rounded-full overflow-hidden text-sm">
           <button
             type="button"
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2 rounded-md text-sm font-medium ${
-              mode === 'login'
-                ? 'bg-white shadow text-indigo-600'
-                : 'text-gray-500'
+            onClick={() => setMode("login")}
+            className={`flex-1 py-2 text-center ${
+              mode === "login"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600"
             }`}
           >
             Entrar
           </button>
           <button
             type="button"
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 rounded-md text-sm font-medium ${
-              mode === 'signup'
-                ? 'bg-white shadow text-indigo-600'
-                : 'text-gray-500'
+            onClick={() => setMode("signup")}
+            className={`flex-1 py-2 text-center ${
+              mode === "signup"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-600"
             }`}
           >
             Criar conta
@@ -87,14 +97,14 @@ export default function LoginPage() {
         </div>
 
         {errorMsg && (
-          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Email
             </label>
             <input
@@ -102,13 +112,13 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="seu@email.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
               Senha
             </label>
             <input
@@ -116,21 +126,21 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="••••••••"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Sua senha"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 rounded-lg bg-indigo-600 text-white py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-70"
+            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading
-              ? 'Processando...'
-              : mode === 'signup'
-              ? 'Criar conta'
-              : 'Entrar'}
+              ? "Processando..."
+              : mode === "login"
+              ? "Entrar"
+              : "Criar conta"}
           </button>
         </form>
       </div>
