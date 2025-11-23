@@ -1,95 +1,92 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function LoginSignupPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function handleLogin(e: React.FormEvent) {
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
-    setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const url =
+        mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
 
-    if (error) {
-      console.error(error);
-      setErrorMsg(error.message || "Erro ao entrar. Tente novamente.");
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      // tenta ler o JSON, mas sem quebrar se vier vazio
+      const body = await res
+        .json()
+        .catch(() => null as unknown as { error?: string });
+
+      if (!res.ok) {
+        setErrorMsg(body?.error ?? 'Erro inesperado ao falar com o servidor.');
+        return;
+      }
+
+      // sucesso
+      if (mode === 'signup') {
+        setMode('login');
+        setErrorMsg('Conta criada! Agora faça login.');
+      } else {
+        router.push('/'); // ou /painel, /dashboard...
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Não foi possível se conectar ao servidor.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // login OK – manda para a página inicial (ajuste se quiser outro caminho)
-    window.location.href = "/";
   }
-
-  async function handleSignup(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      console.error(error);
-      setErrorMsg(error.message || "Erro ao criar conta. Tente novamente.");
-      setLoading(false);
-      return;
-    }
-
-    // cadastro OK – você pode pedir para confirmar e-mail, etc.
-    alert("Conta criada! Verifique seu e-mail (se o Supabase estiver com confirmação ligada).");
-    window.location.href = "/";
-  }
-
-  const onSubmit = mode === "login" ? handleLogin : handleSignup;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold mb-2">
+    <main className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+        <div className="flex justify-center mb-4">
+          <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-600">
             M
           </div>
-          <h1 className="text-xl font-semibold text-slate-800">MegaLinksPro</h1>
-          <p className="text-sm text-slate-500 text-center mt-1">
-            {mode === "login"
-              ? "Entre para gerenciar e divulgar seus grupos."
-              : "Crie sua conta para começar a divulgar seus grupos."}
-          </p>
         </div>
 
-        {/* Tabs Entrar / Criar conta */}
-        <div className="flex mb-4 border border-slate-200 rounded-full overflow-hidden text-sm">
+        <h1 className="text-center text-xl font-semibold text-gray-900 mb-1">
+          MegaLinksPro
+        </h1>
+        <p className="text-center text-sm text-gray-500 mb-6">
+          Crie sua conta para começar a divulgar seus grupos.
+        </p>
+
+        <div className="flex mb-4 rounded-full bg-gray-100 p-1">
           <button
             type="button"
-            onClick={() => setMode("login")}
-            className={`flex-1 py-2 text-center ${
-              mode === "login"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-slate-600"
+            onClick={() => setMode('login')}
+            className={`flex-1 py-2 text-sm rounded-full ${
+              mode === 'login'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'text-gray-600'
             }`}
           >
             Entrar
           </button>
           <button
             type="button"
-            onClick={() => setMode("signup")}
-            className={`flex-1 py-2 text-center ${
-              mode === "signup"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-slate-600"
+            onClick={() => setMode('signup')}
+            className={`flex-1 py-2 text-sm rounded-full ${
+              mode === 'signup'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'text-gray-600'
             }`}
           >
             Criar conta
@@ -97,53 +94,51 @@ export default function LoginSignupPage() {
         </div>
 
         {errorMsg && (
-          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
             </label>
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="seu@email.com"
+              required
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Senha
             </label>
             <input
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Sua senha"
+              required
+              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-indigo-600 text-white py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
           >
             {loading
-              ? "Processando..."
-              : mode === "login"
-              ? "Entrar"
-              : "Criar conta"}
+              ? 'Aguarde...'
+              : mode === 'login'
+              ? 'Entrar'
+              : 'Criar conta'}
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }
