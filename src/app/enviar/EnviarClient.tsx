@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/custom/navbar";
 import Footer from "@/components/custom/footer";
@@ -15,11 +15,14 @@ import { CATEGORIES, Category } from "@/lib/types";
 import { generateId, calculateExpirationDate, isValidEmail, isValidTelegramLink } from "@/lib/utils-groups";
 import { Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+// 👇 importa o client do supabase (ajusta o caminho se for diferente)
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default function EnviarClient() {
   const router = useRouter();
   const { addGroup } = useGroupStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
     nome: "",
     categoria: "" as Category,
@@ -27,6 +30,38 @@ export default function EnviarClient() {
     linkTelegram: "",
     emailDono: ""
   });
+
+  // 🔒 Verificar se o usuário está logado
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+
+      if (!session) {
+        // se não estiver logado, manda pro login
+        router.replace("/login");
+      } else {
+        // liberado pra usar a página
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // enquanto verifica login, não mostra o formulário
+  if (checkingAuth) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen flex items-center justify-center">
+          <p>Carregando...</p>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +109,7 @@ export default function EnviarClient() {
       description: "Seu anúncio está ativo por 7 dias grátis"
     });
 
-    // Redirecionar para o grupo criado
+    // Redirecionar para a página do grupo
     setTimeout(() => {
       router.push(`/grupo/${newGroup.id}`);
     }, 1500);
@@ -183,22 +218,22 @@ export default function EnviarClient() {
                     required
                   />
                   <p className="text-xs text-gray-500">
-                    Usaremos para notificações importantes
+                    Usaremos para notificações importantes sobre seu anúncio
                   </p>
                 </div>
 
-                {/* Info */}
+                {/* Info Box */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-900">
                       <p className="font-semibold mb-1">7 dias grátis!</p>
-                      <p>Seu anúncio ficará ativo por 7 dias sem custo.</p>
+                      <p>Seu anúncio ficará ativo por 7 dias sem custo. Após esse período, você pode renovar escolhendo um de nossos planos.</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Botão */}
+                {/* Botão Submit */}
                 <Button
                   type="submit"
                   size="lg"
