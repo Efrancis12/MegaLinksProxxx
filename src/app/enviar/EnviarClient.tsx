@@ -8,15 +8,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useGroupStore } from "@/lib/store";
 import { CATEGORIES, Category } from "@/lib/types";
-import { generateId, calculateExpirationDate, isValidEmail, isValidTelegramLink } from "@/lib/utils-groups";
+import {
+  generateId,
+  calculateExpirationDate,
+  isValidEmail,
+  isValidTelegramLink,
+} from "@/lib/utils-groups";
 import { Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-// 👇 importa o client do supabase (ajusta o caminho se for diferente)
-import { supabaseClient } from "@/lib/supabaseClient";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function EnviarClient() {
   const router = useRouter();
@@ -28,21 +44,20 @@ export default function EnviarClient() {
     categoria: "" as Category,
     descricao: "",
     linkTelegram: "",
-    emailDono: ""
+    emailDono: "",
   });
 
-  // 🔒 Verificar se o usuário está logado
+  // 🔒 Verificar se o usuário está logado (no client)
   useEffect(() => {
     const checkAuth = async () => {
+      const supabase = createClientComponentClient();
       const {
         data: { session },
-      } = await supabaseClient.auth.getSession();
+      } = await supabase.auth.getSession();
 
       if (!session) {
-        // se não estiver logado, manda pro login
         router.replace("/login");
       } else {
-        // liberado pra usar a página
         setCheckingAuth(false);
       }
     };
@@ -50,7 +65,7 @@ export default function EnviarClient() {
     checkAuth();
   }, [router]);
 
-  // enquanto verifica login, não mostra o formulário
+  // Enquanto verifica auth, mostra carregando
   if (checkingAuth) {
     return (
       <>
@@ -68,7 +83,13 @@ export default function EnviarClient() {
     setIsSubmitting(true);
 
     // Validações
-    if (!formData.nome || !formData.categoria || !formData.descricao || !formData.linkTelegram || !formData.emailDono) {
+    if (
+      !formData.nome ||
+      !formData.categoria ||
+      !formData.descricao ||
+      !formData.linkTelegram ||
+      !formData.emailDono
+    ) {
       toast.error("Por favor, preencha todos os campos");
       setIsSubmitting(false);
       return;
@@ -81,7 +102,9 @@ export default function EnviarClient() {
     }
 
     if (!isValidTelegramLink(formData.linkTelegram)) {
-      toast.error("Link do Telegram inválido. Use o formato: t.me/seugrupo");
+      toast.error(
+        "Link do Telegram inválido. Use o formato: t.me/seugrupo"
+      );
       setIsSubmitting(false);
       return;
     }
@@ -100,16 +123,15 @@ export default function EnviarClient() {
       dataCriacao: now.toISOString(),
       dataExpiracao: expirationDate.toISOString(),
       status: "ativo" as const,
-      visualizacoes: 0
+      visualizacoes: 0,
     };
 
     addGroup(newGroup);
 
     toast.success("Grupo cadastrado com sucesso! 🎉", {
-      description: "Seu anúncio está ativo por 7 dias grátis"
+      description: "Seu anúncio está ativo por 7 dias grátis",
     });
 
-    // Redirecionar para a página do grupo
     setTimeout(() => {
       router.push(`/grupo/${newGroup.id}`);
     }, 1500);
@@ -128,7 +150,8 @@ export default function EnviarClient() {
               Cadastrar Grupo ou Canal
             </h1>
             <p className="text-gray-600 text-lg">
-              Preencha os dados abaixo e comece a divulgar gratuitamente por 7 dias!
+              Preencha os dados abaixo e comece a divulgar gratuitamente por 7
+              dias!
             </p>
           </div>
 
@@ -148,7 +171,9 @@ export default function EnviarClient() {
                     id="nome"
                     placeholder="Ex: Grupo de Tecnologia"
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -158,7 +183,12 @@ export default function EnviarClient() {
                   <Label htmlFor="categoria">Categoria *</Label>
                   <Select
                     value={formData.categoria}
-                    onValueChange={(value) => setFormData({ ...formData, categoria: value as Category })}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        categoria: value as Category,
+                      })
+                    }
                     required
                   >
                     <SelectTrigger>
@@ -182,7 +212,12 @@ export default function EnviarClient() {
                     placeholder="Descreva seu grupo ou canal..."
                     rows={5}
                     value={formData.descricao}
-                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descricao: e.target.value,
+                      })
+                    }
                     required
                   />
                   <p className="text-xs text-gray-500">
@@ -198,7 +233,12 @@ export default function EnviarClient() {
                     type="url"
                     placeholder="https://t.me/seugrupo"
                     value={formData.linkTelegram}
-                    onChange={(e) => setFormData({ ...formData, linkTelegram: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        linkTelegram: e.target.value,
+                      })
+                    }
                     required
                   />
                   <p className="text-xs text-gray-500">
@@ -214,7 +254,12 @@ export default function EnviarClient() {
                     type="email"
                     placeholder="seu@email.com"
                     value={formData.emailDono}
-                    onChange={(e) => setFormData({ ...formData, emailDono: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emailDono: e.target.value,
+                      })
+                    }
                     required
                   />
                   <p className="text-xs text-gray-500">
@@ -228,7 +273,11 @@ export default function EnviarClient() {
                     <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-900">
                       <p className="font-semibold mb-1">7 dias grátis!</p>
-                      <p>Seu anúncio ficará ativo por 7 dias sem custo. Após esse período, você pode renovar escolhendo um de nossos planos.</p>
+                      <p>
+                        Seu anúncio ficará ativo por 7 dias sem custo. Após
+                        esse período, você pode renovar escolhendo um de nossos
+                        planos.
+                      </p>
                     </div>
                   </div>
                 </div>
