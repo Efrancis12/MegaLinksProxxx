@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -18,12 +18,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const url =
-        mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const url = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
 
       const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
@@ -33,20 +32,23 @@ export default function LoginPage() {
         .catch(() => null as unknown as { error?: string });
 
       if (!res.ok) {
-        setErrorMsg(body?.error ?? 'Erro inesperado ao falar com o servidor.');
+        setErrorMsg(
+          body?.error ?? "Erro inesperado ao falar com o servidor."
+        );
         return;
       }
 
       // sucesso
-      if (mode === 'signup') {
-        setMode('login');
-        setErrorMsg('Conta criada! Agora faça login.');
+      if (mode === "signup") {
+        setMode("login");
+        setErrorMsg("Conta criada! Agora faça login.");
       } else {
-        router.push('/'); // ou /painel, /dashboard...
+        // ⬇️ AQUI AGORA MANDA PARA O PAINEL
+        router.push("/painel");
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Não foi possível se conectar ao servidor.');
+      setErrorMsg("Não foi possível se conectar ao servidor.");
     } finally {
       setLoading(false);
     }
@@ -71,22 +73,22 @@ export default function LoginPage() {
         <div className="flex mb-4 rounded-full bg-gray-100 p-1">
           <button
             type="button"
-            onClick={() => setMode('login')}
+            onClick={() => setMode("login")}
             className={`flex-1 py-2 text-sm rounded-full ${
-              mode === 'login'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'text-gray-600'
+              mode === "login"
+                ? "bg-indigo-600 text-white shadow"
+                : "text-gray-600"
             }`}
           >
             Entrar
           </button>
           <button
             type="button"
-            onClick={() => setMode('signup')}
+            onClick={() => setMode("signup")}
             className={`flex-1 py-2 text-sm rounded-full ${
-              mode === 'signup'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'text-gray-600'
+              mode === "signup"
+                ? "bg-indigo-600 text-white shadow"
+                : "text-gray-600"
             }`}
           >
             Criar conta
@@ -131,11 +133,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-indigo-600 text-white py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
           >
-            {loading
-              ? 'Aguarde...'
-              : mode === 'login'
-              ? 'Entrar'
-              : 'Criar conta'}
+            {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
           </button>
         </form>
       </div>
