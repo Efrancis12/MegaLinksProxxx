@@ -14,6 +14,9 @@ import { CATEGORIES } from "@/lib/types";
 import { isAdultCategory } from "@/lib/utils-groups";
 import { Send, TrendingUp, Clock, Shield, Zap, Users } from "lucide-react";
 
+// ⬇️ importa o Supabase client (ajuste o caminho se o seu for diferente)
+import { supabase } from "@/lib/supabase";
+
 export default function Home() {
   const { getFeaturedGroups, getRecentGroups } = useGroupStore();
   const [featuredGroups, setFeaturedGroups] = useState<any[]>([]);
@@ -21,9 +24,33 @@ export default function Home() {
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
+  // ⬇️ estado do usuário logado
+  const [user, setUser] = useState<any | null>(null);
+
   useEffect(() => {
     setFeaturedGroups(getFeaturedGroups());
     setRecentGroups(getRecentGroups());
+  }, [getFeaturedGroups, getRecentGroups]);
+
+  // ⬇️ busca usuário logado no Supabase
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (!error) {
+        setUser(data.user ?? null);
+      }
+    };
+
+    loadUser();
+
+    // escuta mudanças de auth (login / logout)
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   const handleCategoryClick = (category: string) => {
@@ -41,7 +68,9 @@ export default function Home() {
   const handleAgeModalClose = () => {
     setShowAgeModal(false);
     if (selectedCategory) {
-      window.location.href = `/grupos?categoria=${encodeURIComponent(selectedCategory)}`;
+      window.location.href = `/grupos?categoria=${encodeURIComponent(
+        selectedCategory
+      )}`;
     }
   };
 
@@ -58,27 +87,52 @@ export default function Home() {
                 <Zap className="w-4 h-4" />
                 <span>7 dias grátis para testar!</span>
               </div>
-              
+
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
                 Divulgue seu grupo ou canal do Telegram no MegaLinksPro!
               </h1>
-              
+
               <p className="text-xl sm:text-2xl text-white/90 max-w-3xl mx-auto">
                 Ganhe mais membros com facilidade — 7 dias grátis para testar!
               </p>
-              
+
+              {/* ⬇️ Aqui muda conforme está logado ou não */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-                <Link href="/enviar">
-                  <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
-                    <Send className="w-5 h-5 mr-2" />
-                    Cadastrar Meu Grupo
-                  </Button>
-                </Link>
-                <Link href="/grupos">
-                  <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/20 hover:bg-white/30 text-lg px-8 py-6">
-                    Ver Todos os Grupos
-                  </Button>
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/painel">
+                      <Button className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
+                        Ir para meu Painel
+                      </Button>
+                    </Link>
+                    <Link href="/enviar">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-2 border-white text-white bg-white/20 hover:bg-white/30 text-lg px-8 py-6"
+                      >
+                        Cadastrar Novo Grupo
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login">
+                      <Button className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
+                        Entrar / Criar Conta
+                      </Button>
+                    </Link>
+                    <Link href="/grupos">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-2 border-white text-white bg-white/20 hover:bg-white/30 text-lg px-8 py-6"
+                      >
+                        Ver Todos os Grupos
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -215,25 +269,23 @@ export default function Home() {
                 Pronto para Crescer?
               </h2>
               <p className="text-xl text-white/90 max-w-2xl mx-auto">
-                Cadastre seu grupo agora e comece a receber novos membros hoje mesmo!
+                Cadastre seu grupo agora e comece a receber novos membros hoje
+                mesmo!
               </p>
-              <Link href="/enviar">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
+              <Link href={user ? "/enviar" : "/login"}>
+                <Button className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
                   <Send className="w-5 h-5 mr-2" />
-                  Cadastrar Gratuitamente
+                  {user ? "Cadastrar Meu Grupo" : "Entrar para Cadastrar"}
                 </Button>
               </Link>
             </CardContent>
           </Card>
         </section>
       </main>
-      
+
       <Footer />
-      
-      <AgeVerificationModal 
-        isOpen={showAgeModal} 
-        onClose={handleAgeModalClose}
-      />
+
+      <AgeVerificationModal isOpen={showAgeModal} onClose={handleAgeModalClose} />
     </>
   );
 }
