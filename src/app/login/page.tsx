@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase"; // ⬅️ client do Supabase no browser
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -18,33 +19,36 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const url = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
+      if (mode === "login") {
+        // 👇 Login direto no supabase do cliente
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+        if (error) {
+          console.error("Erro Supabase login:", error);
+          setErrorMsg(error.message);
+          return;
+        }
 
-      // tenta ler o JSON, mas sem quebrar se vier vazio
-      const body = await res
-        .json()
-        .catch(() => null as unknown as { error?: string });
+        // Sessão já está salva no navegador automaticamente
+        router.push("/painel");
+      } else {
+        // 👇 Criar conta
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-      if (!res.ok) {
-        setErrorMsg(
-          body?.error ?? "Erro inesperado ao falar com o servidor."
-        );
-        return;
-      }
+        if (error) {
+          console.error("Erro Supabase signup:", error);
+          setErrorMsg(error.message);
+          return;
+        }
 
-      // sucesso
-      if (mode === "signup") {
         setMode("login");
         setErrorMsg("Conta criada! Agora faça login.");
-      } else {
-        // ⬇️ AQUI AGORA MANDA PARA O PAINEL
-        router.push("/painel");
       }
     } catch (err) {
       console.error(err);
