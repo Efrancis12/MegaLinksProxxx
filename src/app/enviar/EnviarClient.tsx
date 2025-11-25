@@ -37,6 +37,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 export default function EnviarClient() {
   const router = useRouter();
   const { addGroup } = useGroupStore();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
@@ -47,15 +48,17 @@ export default function EnviarClient() {
     emailDono: "",
   });
 
-  // 🔒 Verificar login no CLIENTE
+  // 🔒 Verificar se o usuário está logado (proteção da página)
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClientComponentClient();
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!session) {
+        // se não estiver logado, manda pro login
         router.replace("/login");
       } else {
         setCheckingAuth(false);
@@ -65,7 +68,7 @@ export default function EnviarClient() {
     checkAuth();
   }, [router]);
 
-  // Enquanto verifica a sessão, não mostra o formulário
+  // Enquanto verifica login, mostra um carregando simples
   if (checkingAuth) {
     return (
       <>
@@ -82,7 +85,7 @@ export default function EnviarClient() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validações
+    // Validações básicas
     if (
       !formData.nome ||
       !formData.categoria ||
@@ -132,6 +135,7 @@ export default function EnviarClient() {
       description: "Seu anúncio está ativo por 7 dias grátis",
     });
 
+    // Redirecionar para a página do grupo recém criado
     setTimeout(() => {
       router.push(`/grupo/${newGroup.id}`);
     }, 1500);
