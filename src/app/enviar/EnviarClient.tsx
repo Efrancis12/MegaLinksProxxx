@@ -32,7 +32,6 @@ import {
 } from "@/lib/utils-groups";
 import { Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function EnviarClient() {
   const router = useRouter();
@@ -48,27 +47,18 @@ export default function EnviarClient() {
     emailDono: "",
   });
 
-  // 🔒 Verificar se o usuário está logado (proteção da página)
+  // 🔒 Proteção simples via localStorage
   useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClientComponentClient();
+    const loggedFlag = localStorage.getItem("mlp-logged");
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        // se não estiver logado, manda pro login
-        router.replace("/login");
-      } else {
-        setCheckingAuth(false);
-      }
-    };
-
-    checkAuth();
+    if (!loggedFlag) {
+      // se não estiver "logado" segundo o flag, manda pro login
+      router.replace("/login");
+    } else {
+      setCheckingAuth(false);
+    }
   }, [router]);
 
-  // Enquanto verifica login, mostra um carregando simples
   if (checkingAuth) {
     return (
       <>
@@ -85,7 +75,6 @@ export default function EnviarClient() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validações básicas
     if (
       !formData.nome ||
       !formData.categoria ||
@@ -112,7 +101,6 @@ export default function EnviarClient() {
       return;
     }
 
-    // Criar grupo
     const now = new Date();
     const expirationDate = calculateExpirationDate(now, 7); // 7 dias grátis
 
@@ -135,7 +123,6 @@ export default function EnviarClient() {
       description: "Seu anúncio está ativo por 7 dias grátis",
     });
 
-    // Redirecionar para a página do grupo recém criado
     setTimeout(() => {
       router.push(`/grupo/${newGroup.id}`);
     }, 1500);
