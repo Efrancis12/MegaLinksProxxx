@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/custom/navbar";
 import Footer from "@/components/custom/footer";
@@ -32,13 +32,11 @@ import {
 } from "@/lib/utils-groups";
 import { Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function EnviarClient() {
   const router = useRouter();
   const { addGroup } = useGroupStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
     nome: "",
     categoria: "" as Category,
@@ -46,37 +44,6 @@ export default function EnviarClient() {
     linkTelegram: "",
     emailDono: "",
   });
-
-  // 🔒 Verificar se o usuário está logado (no client)
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClientComponentClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.replace("/login");
-      } else {
-        setCheckingAuth(false);
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  // Enquanto verifica auth, mostra carregando
-  if (checkingAuth) {
-    return (
-      <>
-        <Navbar />
-        <main className="min-h-screen flex items-center justify-center">
-          <p>Carregando...</p>
-        </main>
-        <Footer />
-      </>
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +99,7 @@ export default function EnviarClient() {
       description: "Seu anúncio está ativo por 7 dias grátis",
     });
 
+    // Redirecionar para a página do grupo
     setTimeout(() => {
       router.push(`/grupo/${newGroup.id}`);
     }, 1500);
