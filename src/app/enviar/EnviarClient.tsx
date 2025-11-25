@@ -49,10 +49,11 @@ export default function EnviarClient() {
 
   // 🔒 Proteção simples via localStorage
   useEffect(() => {
-    const loggedFlag = localStorage.getItem("mlp-logged");
+    const loggedFlag = typeof window !== "undefined"
+      ? localStorage.getItem("mlp-logged")
+      : null;
 
     if (!loggedFlag) {
-      // se não estiver "logado" segundo o flag, manda pro login
       router.replace("/login");
     } else {
       setCheckingAuth(false);
@@ -94,9 +95,7 @@ export default function EnviarClient() {
     }
 
     if (!isValidTelegramLink(formData.linkTelegram)) {
-      toast.error(
-        "Link do Telegram inválido. Use o formato: t.me/seugrupo"
-      );
+      toast.error("Link do Telegram inválido. Use o formato: t.me/seugrupo");
       setIsSubmitting(false);
       return;
     }
@@ -141,17 +140,14 @@ export default function EnviarClient() {
               Cadastrar Grupo ou Canal
             </h1>
             <p className="text-gray-600 text-lg">
-              Preencha os dados abaixo e comece a divulgar gratuitamente por 7
-              dias!
+              Preencha os dados abaixo e comece a divulgar gratuitamente por 7 dias!
             </p>
           </div>
 
           <Card className="border-2">
             <CardHeader>
               <CardTitle>Informações do Grupo/Canal</CardTitle>
-              <CardDescription>
-                Todos os campos são obrigatórios
-              </CardDescription>
+              <CardDescription>Todos os campos são obrigatórios</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -265,9 +261,8 @@ export default function EnviarClient() {
                     <div className="text-sm text-blue-900">
                       <p className="font-semibold mb-1">7 dias grátis!</p>
                       <p>
-                        Seu anúncio ficará ativo por 7 dias sem custo. Após
-                        esse período, você pode renovar escolhendo um de nossos
-                        planos.
+                        Seu anúncio ficará ativo por 7 dias sem custo. Após esse período,
+                        você pode renovar escolhendo um de nossos planos.
                       </p>
                     </div>
                   </div>
