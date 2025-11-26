@@ -2,143 +2,138 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase"; // ⬅️ client do Supabase no browser
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tab, setTab] = useState<"login" | "signup">("login");
 
-  const router = useRouter();
-
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      if (mode === "login") {
-        // 👇 Login direto no supabase do cliente
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+      if (!email || !password) {
+        toast.error("Preencha email e senha");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (tab === "login") {
+        // 🔐 LOGIN via rota /api/auth/login já existente
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
 
-        if (error) {
-          console.error("Erro Supabase login:", error);
-          setErrorMsg(error.message);
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.error || "Erro ao fazer login");
+          setIsSubmitting(false);
           return;
         }
 
-        // Sessão já está salva no navegador automaticamente
+        // ✅ MARCA COMO LOGADO NO NAVEGADOR
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mlp-logged", "true");
+        }
+
+        toast.success("Login realizado com sucesso!");
         router.push("/painel");
       } else {
-        // 👇 Criar conta
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          console.error("Erro Supabase signup:", error);
-          setErrorMsg(error.message);
-          return;
-        }
-
-        setMode("login");
-        setErrorMsg("Conta criada! Agora faça login.");
+        // 🆕 CRIAR CONTA (se você quiser usar sua API de signup aqui depois)
+        toast.info("Cadastro de conta ainda não implementado nesta tela.");
+        setIsSubmitting(false);
       }
     } catch (err) {
-      console.error(err);
-      setErrorMsg("Não foi possível se conectar ao servidor.");
-    } finally {
-      setLoading(false);
+      console.error("Erro inesperado no login:", err);
+      toast.error("Erro inesperado. Tente novamente.");
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex justify-center mb-4">
-          <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-600">
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-12 h-12 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-xl mb-3">
             M
           </div>
+          <h1 className="text-xl font-semibold mb-1">MegaLinksPro</h1>
+          <p className="text-sm text-gray-500 text-center">
+            Crie sua conta para começar a divulgar seus grupos.
+          </p>
         </div>
 
-        <h1 className="text-center text-xl font-semibold text-gray-900 mb-1">
-          MegaLinksPro
-        </h1>
-        <p className="text-center text-sm text-gray-500 mb-6">
-          Crie sua conta para começar a divulgar seus grupos.
-        </p>
-
-        <div className="flex mb-4 rounded-full bg-gray-100 p-1">
+        {/* Abas Entrar / Criar conta (visual) */}
+        <div className="flex mb-6 bg-gray-100 rounded-full p-1">
           <button
             type="button"
-            onClick={() => setMode("login")}
-            className={`flex-1 py-2 text-sm rounded-full ${
-              mode === "login"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-gray-600"
+            onClick={() => setTab("login")}
+            className={`flex-1 py-2 text-sm font-medium rounded-full ${
+              tab === "login"
+                ? "bg-violet-600 text-white shadow"
+                : "text-gray-500"
             }`}
           >
             Entrar
           </button>
           <button
             type="button"
-            onClick={() => setMode("signup")}
-            className={`flex-1 py-2 text-sm rounded-full ${
-              mode === "signup"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-gray-600"
+            onClick={() => setTab("signup")}
+            className={`flex-1 py-2 text-sm font-medium rounded-full ${
+              tab === "signup"
+                ? "bg-violet-600 text-white shadow"
+                : "text-gray-500"
             }`}
           >
             Criar conta
           </button>
         </div>
 
-        {errorMsg && (
-          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {errorMsg}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Email</label>
+            <Input
               type="email"
+              placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
-            <input
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Senha</label>
+            <Input
               type="password"
+              placeholder="Sua senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 text-white py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+            className="w-full mt-2 bg-violet-600 hover:bg-violet-700"
+            disabled={isSubmitting}
           >
-            {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
-          </button>
+            {isSubmitting
+              ? tab === "login"
+                ? "Entrando..."
+                : "Criando conta..."
+              : tab === "login"
+              ? "Entrar"
+              : "Criar conta"}
+          </Button>
         </form>
       </div>
     </main>
