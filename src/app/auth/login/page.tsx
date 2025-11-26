@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tab, setTab] = useState<"login" | "signup">("login"); // Entrar / Criar conta
+  const [tab, setTab] = useState<"login" | "signup">("login");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +28,7 @@ export default function LoginPage() {
       }
 
       if (tab === "login") {
-        // 🔐 LOGIN
+        // 🔐 LOGIN direto no Supabase
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -36,15 +36,20 @@ export default function LoginPage() {
 
         if (error) {
           console.error("Erro login supabase:", error);
-          toast.error(error.message || "Erro ao entrar");
+          toast.error(error.message || "Erro ao fazer login");
           setIsSubmitting(false);
           return;
+        }
+
+        // ✅ Marca como logado no navegador
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mlp-logged", "true");
         }
 
         toast.success("Login realizado com sucesso!");
         router.push("/painel");
       } else {
-        // 🆕 CRIAR CONTA
+        // 🆕 CRIAR CONTA (opcional, se quiser ligar depois)
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -57,7 +62,7 @@ export default function LoginPage() {
           return;
         }
 
-        toast.success("Conta criada! Verifique seu email (se necessário) e faça login.");
+        toast.success("Conta criada! Agora faça login.");
         setTab("login");
         setIsSubmitting(false);
       }
