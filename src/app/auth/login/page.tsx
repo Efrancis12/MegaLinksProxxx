@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,20 +25,23 @@ export default function LoginPage() {
       }
 
       if (tab === "login") {
-        // 🔐 LOGIN direto no Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        // 🔐 LOGIN via API que já existe
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         });
 
-        if (error) {
-          console.error("Erro login supabase:", error);
-          toast.error(error.message || "Erro ao fazer login");
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Erro /api/auth/login:", data);
+          toast.error(data.error || "Erro ao fazer login");
           setIsSubmitting(false);
           return;
         }
 
-        // ✅ Marca como logado no navegador
+        // ✅ Marca como logado no navegador (para /enviar)
         if (typeof window !== "undefined") {
           localStorage.setItem("mlp-logged", "true");
         }
@@ -49,21 +49,8 @@ export default function LoginPage() {
         toast.success("Login realizado com sucesso!");
         router.push("/painel");
       } else {
-        // 🆕 CRIAR CONTA (opcional, se quiser ligar depois)
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          console.error("Erro signup supabase:", error);
-          toast.error(error.message || "Erro ao criar conta");
-          setIsSubmitting(false);
-          return;
-        }
-
-        toast.success("Conta criada! Agora faça login.");
-        setTab("login");
+        // aba "Criar conta" – pode ligar depois se quiser
+        toast.info("Cadastro de conta ainda não está implementado.");
         setIsSubmitting(false);
       }
     } catch (err) {
@@ -114,7 +101,9 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Email</label>
+            <label className="text-sm font-medium text-gray-700">
+              Email
+            </label>
             <Input
               type="email"
               placeholder="seu@email.com"
@@ -125,7 +114,9 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Senha</label>
+            <label className="text-sm font-medium text-gray-700">
+              Senha
+            </label>
             <Input
               type="password"
               placeholder="Sua senha"
